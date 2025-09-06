@@ -1,0 +1,5 @@
+model_name: 'cnn'
+
+model_output_paths:
+  dir: '../models'
+  model: '../models/cnn.keras'

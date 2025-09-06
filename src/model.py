@@ -1,5 +1,4 @@
 import tensorflow as tf
-from src.util import read_config
 
 
 def build_cnn_model(config):
@@ -29,8 +28,3 @@ def build_cnn_model(config):
 
     return model
 
-
-if __name__ == '__main__':
-    config = read_config("../config/base_config.yaml")
-    model = build_cnn_model(config)
-    model.summary()

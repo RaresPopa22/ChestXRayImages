@@ -28,7 +28,7 @@ def load_and_preprocess_split(base_path, split, target_size):
             if img is not None:
                 img = cv2.resize(img, (target_size, target_size))
                 img = img.astype(np.float32) / 255.0
-                img = np.expand_dims(img, axis=1)
+                img = np.expand_dims(img, axis=-1)
 
                 images.append(img)
                 labels.append(label_idx)
@@ -81,26 +81,21 @@ def perform_data_augmentation(config, X_train, y_train):
         X_train_balanced, y_train_balanced = shuffle(X_train_balanced, y_train_balanced, random_state=1)
 
         print(f'After augmentation. New total training sample: {len(X_train_balanced)}')
-        print(f'New Class 0 (Minority) count: {np.sum(y_train_balanced==0)}')
-        print(f'New Class 1 (Majority) count: {np.sum(y_train_balanced==1)}')
+        print(f'New Class 0 (Minority) count: {np.sum(y_train_balanced == 0)}')
+        print(f'New Class 1 (Majority) count: {np.sum(y_train_balanced == 1)}')
 
         return X_train_balanced, y_train_balanced
     else:
-        print("Dataset is already balanced or the minority class is not the actual minority here. No augmentation will be performed")
+        print(
+            "Dataset is already balanced or the minority class is not the actual minority here. No augmentation will be performed")
         return X_train, y_train
 
 
-def preprocess_data(config):
-    raw_config = config['data_paths']['raw_data']
-    path = raw_config['path']
-    target_size = raw_config['target_size']
+def preprocess_training_data(config):
+    path, target_size = get_preprocess_data(config)
 
     X_train, y_train = load_and_preprocess_split(path, 'train', target_size)
     X_val, y_val = load_and_preprocess_split(path, 'val', target_size)
-    X_test, y_test = load_and_preprocess_split(path, 'test', target_size)
-
-    print(f'Original Training data shape: X={X_train.shape}, y={y_train.shape}')
-    print(f'Original Validation data shape: X={X_val.shape}, y={y_val.shape}')
 
     X_train, X_to_val, y_train, y_to_val = train_test_split(
         X_train, y_train, test_size=0.10, random_state=1, stratify=y_train
@@ -111,8 +106,19 @@ def preprocess_data(config):
     X_val = np.concatenate((X_val, X_to_val), axis=0)
     y_val = np.concatenate((y_val, y_to_val), axis=0)
 
-    print(f'New Training data shape: X={X_train.shape}, y={y_train.shape}')
-    print(f'New Validation data shape: X={X_val.shape}, y={y_val.shape}')
+    return X_train, X_val, y_train, y_val
 
-    print(f'Testing data shape: X={X_test.shape}, y={y_test.shape}')
-    print(f'Total data: {X_train.shape[0] + X_val.shape[0] + X_test.shape[0]}')
+
+def get_preprocess_data(config):
+    raw_config = config['data_paths']['raw_data']
+    path = raw_config['path']
+    target_size = raw_config['target_size']
+
+    return path, target_size
+
+
+def preprocess_test_data(config):
+   path, target_size = get_preprocess_data(config)
+   X_test, y_test = load_and_preprocess_split(path, 'test', target_size)
+
+   return X_test, y_test
