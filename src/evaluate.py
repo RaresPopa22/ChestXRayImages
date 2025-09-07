@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from pathlib import Path
@@ -22,7 +21,9 @@ def evaluate(config, model_paths):
         y_pred_proba = model.predict(X_test)
         y_pred = (y_pred_proba > config['hyperparameters']['threshold']).astype('int32')
         class_labels = ['NORMAL', 'PNEUMONIA']
-        print(classification_report(y_test, y_pred, target_names=[class_labels[0], class_labels[1]]))
+        report = classification_report(y_test, y_pred, target_names=[class_labels[0], class_labels[1]])
+        print(f'Printing the report for {model_path.stem}')
+        print(report)
 
         auprc = average_precision_score(y_test, y_pred)
         roc_auc = roc_auc_score(y_test, y_pred)

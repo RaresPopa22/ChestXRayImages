@@ -1,7 +1,5 @@
-from keras.src.callbacks import EarlyStopping, ModelCheckpoint
-
 from src.data_processing import preprocess_training_data
-from src.model import build_cnn_model, get_class_weight, get_early_stopping, get_model_checkpoint
+from src.model import build_cnn_model, get_early_stopping, get_model_checkpoint
 from src.util import parse_args_and_get_config
 
 

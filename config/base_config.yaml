@@ -6,3 +6,6 @@ data_paths:
 metadata:
   minority_class: 0
   majority_class: 1
+
+split:
+  val_percent: 0.10

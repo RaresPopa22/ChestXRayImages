@@ -3,9 +3,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 import tensorflow as tf
-from sklearn.utils import shuffle
-
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 
 
 def load_and_preprocess_split(base_path, split, target_size):
@@ -97,14 +96,16 @@ def preprocess_training_data(config):
     X_train, y_train = load_and_preprocess_split(path, 'train', target_size)
     X_val, y_val = load_and_preprocess_split(path, 'val', target_size)
 
+    X_train = np.concatenate((X_train, X_val), axis=0)
+    y_train = np.concatenate((y_train, y_val), axis=0)
+
+    X_train, y_train = shuffle(X_train, y_train, random_state=1)
+
     X_train, X_to_val, y_train, y_to_val = train_test_split(
-        X_train, y_train, test_size=0.10, random_state=1, stratify=y_train
+        X_train, y_train, test_size=config['split']['val_percent'], random_state=1, stratify=y_train
     )
 
     X_train, y_train = perform_data_augmentation(config, X_train, y_train)
-
-    X_val = np.concatenate((X_val, X_to_val), axis=0)
-    y_val = np.concatenate((y_val, y_to_val), axis=0)
 
     return X_train, X_val, y_train, y_val
 
