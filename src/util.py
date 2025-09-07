@@ -1,6 +1,7 @@
 import argparse
 
 import yaml
+from matplotlib import pyplot as plt
 
 
 def read_config(path):
@@ -29,7 +30,19 @@ def parse_args_and_get_config(stage):
         parser.add_argument('--config', required=True, help='Path to configuration file')
         parser.add_argument('--models', nargs="+", required=True, help='Paths to model files')
         args = parser.parse_args()
-        return read_configs(base_config, args.config)
+        return read_configs(base_config, args.config), args.models
     else:
         raise ValueError("Unknown stage. Only 'train' and 'evaluate' supported so far")
 
+
+def plot_precision_recall_curve(recalls, precisions, labels, auprcs):
+    fig, ax = plt.subplots(figsize=(10, 7))
+
+    for i in range(len(recalls)):
+        ax.plot(recalls[i], precisions[i], label=f'{labels[i]} (AUPRC = {auprcs[i]:.3f})')
+
+    ax.set_xlabel('Recall', fontsize=14)
+    ax.set_ylabel('Precision', fontsize=14)
+    ax.set_title('Precision-Recall Curve for Chest X-Ray Images', fontsize=16)
+    ax.legend(loc='lower left')
+    plt.show()

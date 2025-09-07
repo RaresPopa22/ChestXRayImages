@@ -1,4 +1,7 @@
+import numpy as np
 import tensorflow as tf
+from keras.src.callbacks import EarlyStopping, ModelCheckpoint
+from sklearn.utils import compute_class_weight
 
 
 def build_cnn_model(config):
@@ -7,7 +10,8 @@ def build_cnn_model(config):
     input_shape = (target_size, target_size, 1)
 
     input_img = tf.keras.layers.Input(shape=input_shape)
-    x = tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(input_img)
+    x = tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(
+        input_img)
     x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
     x = tf.keras.layers.BatchNormalization()(x)
 
@@ -28,3 +32,28 @@ def build_cnn_model(config):
 
     return model
 
+
+def get_early_stopping():
+    return EarlyStopping(
+        monitor='val_loss',
+        patience=5,
+        restore_best_weights=True
+    )
+
+
+def get_model_checkpoint(config):
+    return ModelCheckpoint(
+        filepath=config['model_output_paths']['model'],
+        save_best_only=True,
+        monitor='val_loss'
+    )
+
+
+def get_class_weight(config, y_train):
+    class_weights = compute_class_weight(
+        config['hyperparameters']['class_weight'],
+        classes=np.unique(y_train),
+        y=y_train
+    )
+
+    return dict(enumerate(class_weights))

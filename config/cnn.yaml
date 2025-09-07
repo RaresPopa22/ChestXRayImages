@@ -3,3 +3,9 @@ model_name: 'cnn'
 model_output_paths:
   dir: '../models'
   model: '../models/cnn.keras'
+
+hyperparameters:
+  epochs: 100
+  batch_size: 32
+  class_weight: 'balanced'
+  threshold: 0.75
