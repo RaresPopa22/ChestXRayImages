@@ -1,13 +1,13 @@
-from pathlib import Path
-
 import cv2
 import numpy as np
 import tensorflow as tf
+
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 
-def load_and_preprocess_split(base_path, split, target_size):
+def load_and_preprocess_split(base_path, split, target_size, grayscale_to_rgb):
     images = []
     labels = []
     label_map = {'NORMAL': 0, 'PNEUMONIA': 1}
@@ -28,6 +28,10 @@ def load_and_preprocess_split(base_path, split, target_size):
                 img = cv2.resize(img, (target_size, target_size))
                 img = img.astype(np.float32) / 255.0
                 img = np.expand_dims(img, axis=-1)
+
+                if grayscale_to_rgb:
+                    tensor_img = tf.convert_to_tensor(img)
+                    img = tf.image.grayscale_to_rgb(tensor_img).numpy()
 
                 images.append(img)
                 labels.append(label_idx)
@@ -90,11 +94,11 @@ def perform_data_augmentation(config, X_train, y_train):
         return X_train, y_train
 
 
-def preprocess_training_data(config):
+def preprocess_training_data(config, grayscale_to_rgb=False):
     path, target_size = get_preprocess_data(config)
 
-    X_train, y_train = load_and_preprocess_split(path, 'train', target_size)
-    X_val, y_val = load_and_preprocess_split(path, 'val', target_size)
+    X_train, y_train = load_and_preprocess_split(path, 'train', target_size, grayscale_to_rgb)
+    X_val, y_val = load_and_preprocess_split(path, 'val', target_size, grayscale_to_rgb)
 
     X_train = np.concatenate((X_train, X_val), axis=0)
     y_train = np.concatenate((y_train, y_val), axis=0)
@@ -118,8 +122,8 @@ def get_preprocess_data(config):
     return path, target_size
 
 
-def preprocess_test_data(config):
-   path, target_size = get_preprocess_data(config)
-   X_test, y_test = load_and_preprocess_split(path, 'test', target_size)
+def preprocess_test_data(config, grayscale_to_rgb=False):
+    path, target_size = get_preprocess_data(config)
+    X_test, y_test = load_and_preprocess_split(path, 'test', target_size, grayscale_to_rgb)
 
-   return X_test, y_test
+    return X_test, y_test

@@ -1,12 +1,19 @@
 from src.data_processing import preprocess_training_data
-from src.model import build_cnn_model, get_early_stopping, get_model_checkpoint
+from src.model import build_cnn_model, get_early_stopping, get_model_checkpoint, build_resnet_50
 from src.util import parse_args_and_get_config
 
 
 def train(config):
-    X_train, X_val, y_train, y_val = preprocess_training_data(config)
+    model_name = config['model_name']
 
-    model = build_cnn_model(config)
+
+    if model_name == 'cnn':
+        X_train, X_val, y_train, y_val = preprocess_training_data(config)
+        model = build_cnn_model(config)
+    elif model_name == 'resnet50':
+        X_train, X_val, y_train, y_val = preprocess_training_data(config, grayscale_to_rgb=True)
+        model = build_resnet_50(config)
+
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
     early_stopping = get_early_stopping()

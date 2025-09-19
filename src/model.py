@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from keras.src.applications.resnet import ResNet50
 from keras.src.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.utils import compute_class_weight
 
@@ -29,6 +30,23 @@ def build_cnn_model(config):
     outputs = tf.keras.layers.Dense(units=1, activation='sigmoid')(dropout)
 
     model = tf.keras.Model(inputs=input_img, outputs=outputs)
+
+    return model
+
+
+def build_resnet_50(config):
+    raw_config = config['data_paths']['raw_data']
+    target_size = raw_config['target_size']
+    input_shape = (target_size, target_size, 3)
+    base_model = ResNet50(weights='imagenet', include_top=False, input_shape=input_shape)
+    base_model.trainable = False
+
+    x = base_model.output
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.Dropout(rate=0.2)(x)
+    outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+
+    model = tf.keras.Model(inputs=base_model.input, outputs=outputs)
 
     return model
 

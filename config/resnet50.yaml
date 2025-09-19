@@ -1,0 +1,11 @@
+model_name: 'resnet50'
+
+model_output_paths:
+  dir: '../models'
+  model: '../models/resnet50.keras'
+
+hyperparameters:
+  epochs: 100
+  batch_size: 32
+  class_weight: 'balanced'
+  threshold: 0.75

@@ -18,6 +18,9 @@ def evaluate(config, model_paths):
         model_path = Path(path)
         model = tf.keras.models.load_model(model_path)
 
+        if model_path.stem == 'resnet50':
+            X_test, y_test = preprocess_test_data(config, grayscale_to_rgb=True)
+
         y_pred_proba = model.predict(X_test)
         y_pred = (y_pred_proba > config['hyperparameters']['threshold']).astype('int32')
         class_labels = ['NORMAL', 'PNEUMONIA']
