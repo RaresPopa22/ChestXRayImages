@@ -7,10 +7,12 @@ from sklearn.metrics import precision_recall_curve, average_precision_score, cla
 
 from src.data_processing import preprocess_test_data
 from src.util import parse_args_and_get_config, plot_precision_recall_curve
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 def evaluate(config, model_paths):
     X_test, y_test = preprocess_test_data(config)
+    test_generator = X_test
 
     results, precisions, recalls, labels, auprcs = [], [], [], [], []
 
@@ -19,9 +21,16 @@ def evaluate(config, model_paths):
         model = tf.keras.models.load_model(model_path)
 
         if model_path.stem == 'resnet50':
-            X_test, y_test = preprocess_test_data(config, grayscale_to_rgb=True)
+            datagen = ImageDataGenerator(rescale=1. / 255)
+            test_generator = datagen.flow_from_directory(
+                directory='../data/raw/test',
+                color_mode='rgb',
+                class_mode='binary',
+                shuffle=False
+            )
+            y_test = test_generator.classes
 
-        y_pred_proba = model.predict(X_test)
+        y_pred_proba = model.predict(test_generator)
         y_pred = (y_pred_proba > config['hyperparameters']['threshold']).astype('int32')
         class_labels = ['NORMAL', 'PNEUMONIA']
         report = classification_report(y_test, y_pred, target_names=[class_labels[0], class_labels[1]])

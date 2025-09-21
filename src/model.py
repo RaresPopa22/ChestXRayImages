@@ -3,6 +3,7 @@ import tensorflow as tf
 from keras.src.applications.resnet import ResNet50
 from keras.src.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.utils import compute_class_weight
+from tensorflow.keras.callbacks import ReduceLROnPlateau
 
 
 def build_cnn_model(config):
@@ -41,6 +42,9 @@ def build_resnet_50(config):
     base_model = ResNet50(weights='imagenet', include_top=False, input_shape=input_shape)
     base_model.trainable = False
 
+    for layer in base_model.layers[-20:]:
+        layer.trainable = True
+
     x = base_model.output
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
     x = tf.keras.layers.Dropout(rate=0.2)(x)
@@ -75,3 +79,13 @@ def get_class_weight(config, y_train):
     )
 
     return dict(enumerate(class_weights))
+
+
+def get_lr_scheduler():
+    return ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.2,
+        patience=2,
+        verbose=1,
+        min_lr=1e-6
+    )

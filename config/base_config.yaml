@@ -8,4 +8,4 @@ metadata:
   majority_class: 1
 
 split:
-  val_percent: 0.10
+  val_percent: 0.20
