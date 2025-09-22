@@ -12,22 +12,35 @@ def build_cnn_model(config):
     input_shape = (target_size, target_size, 1)
 
     input_img = tf.keras.layers.Input(shape=input_shape)
-    x = tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(
-        input_img)
-    x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
+    x = tf.keras.layers.ZeroPadding2D(padding=(3,3))(input_img)
+
+    x = tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='same', strides=2)(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Activation('relu')(x)
+    x = tf.keras.layers.MaxPool2D(pool_size=3, strides=2)(x)
+
+    x_shortcut = x
+
+    x = tf.keras.layers.Conv2D(filters=128, kernel_size=3, padding='same', strides=1)(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Activation('relu')(x)
+
+    x = tf.keras.layers.Conv2D(filters=256, kernel_size=3, padding='same', strides=1)(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Activation('relu')(x)
+
+    x = tf.keras.layers.Conv2D(filters=512, kernel_size=3, padding='same', strides=1)(x)
     x = tf.keras.layers.BatchNormalization()(x)
 
-    x = tf.keras.layers.Conv2D(filters=64, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(x)
-    x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+    x_shortcut = tf.keras.layers.Conv2D(filters=512, kernel_size=1, padding='same', strides=1)(x_shortcut)
+    x_shortcut = tf.keras.layers.BatchNormalization()(x_shortcut)
 
-    x = tf.keras.layers.Conv2D(filters=128, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(x)
-    x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Add()([x, x_shortcut])
+    x = tf.keras.layers.Activation('relu')(x)
 
-    f = tf.keras.layers.Flatten()(x)
+    f = tf.keras.layers.GlobalAveragePooling2D()(x)
     dense = tf.keras.layers.Dense(units=128, activation='relu')(f)
-    dropout = tf.keras.layers.Dropout(0.5)(dense)
+    dropout = tf.keras.layers.Dropout(0.2)(dense)
     outputs = tf.keras.layers.Dense(units=1, activation='sigmoid')(dropout)
 
     model = tf.keras.Model(inputs=input_img, outputs=outputs)

@@ -127,44 +127,6 @@ def preprocess_test_data(config, grayscale_to_rgb=False):
     return X_test, y_test
 
 
-def create_datagen(config):
-    train_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_training_data(config, grayscale_to_rgb=True),
-        rotation_range=10,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        shear_range=0.1,
-        zoom_range=0.1,
-        horizontal_flip=False,
-        fill_mode='nearest'
-    )
-
-    validation_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_training_data(config, grayscale_to_rgb=True))
-
-    return train_datagen, validation_datagen
-
-
-def create_data_generators(train_datagen, val_datagen, config):
-    train_generator = train_datagen.flow_from_directory(
-        directory='../data/raw/train',
-        color_mode='grayscale',
-        class_mode='binary',
-        subset='training',
-        shuffle=True
-    )
-
-    val_generator = val_datagen.flow_from_directory(
-        directory='../data/raw/train',
-        color_mode='grayscale',
-        class_mode='binary',
-        subset='validation',
-        shuffle=False
-    )
-
-    return train_generator, val_generator
-
-
 def create_data_blueprint(config):
     raw_config = config['data_paths']['raw_data']
     base_path = Path(raw_config['path']) / 'train'
@@ -193,7 +155,7 @@ def get_data_and_split(config):
     return train_df, valid_df
 
 
-def get_generators(config):
+def get_training_generators(config, grayscale=False):
     train_df, valid_df = get_data_and_split(config)
 
     train_datagen = ImageDataGenerator(
@@ -216,6 +178,7 @@ def get_generators(config):
         dataframe=train_df,
         x_col='filepath',
         y_col='label',
+        color_mode= 'grayscale' if grayscale else 'rgb',
         target_size=(target_size, target_size),
         batch_size=batch_size,
         class_mode='binary',
@@ -226,6 +189,7 @@ def get_generators(config):
         dataframe=valid_df,
         x_col='filepath',
         y_col='label',
+        color_mode='grayscale' if grayscale else 'rgb',
         target_size=(target_size, target_size),
         class_mode='binary',
         batch_size=batch_size,
@@ -233,3 +197,19 @@ def get_generators(config):
     )
 
     return train_generator, val_generator
+
+
+def get_test_generators(config, grayscale=False):
+    raw_config = config['data_paths']['raw_data']
+    test_path = Path(raw_config['path']) / 'test'
+
+    datagen = ImageDataGenerator(rescale=1. / 255)
+
+    test_generator = datagen.flow_from_directory(
+        directory=test_path,
+        color_mode='grayscale' if grayscale else 'rgb',
+        class_mode='binary',
+        shuffle=False
+    )
+
+    return test_generator

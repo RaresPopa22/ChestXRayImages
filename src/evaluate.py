@@ -5,7 +5,7 @@ import tensorflow as tf
 from sklearn.metrics import precision_recall_curve, average_precision_score, classification_report, roc_auc_score, \
     f1_score
 
-from src.data_processing import preprocess_test_data
+from src.data_processing import preprocess_test_data, get_test_generators
 from src.util import parse_args_and_get_config, plot_precision_recall_curve
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
@@ -21,14 +21,11 @@ def evaluate(config, model_paths):
         model = tf.keras.models.load_model(model_path)
 
         if model_path.stem == 'resnet50':
-            datagen = ImageDataGenerator(rescale=1. / 255)
-            test_generator = datagen.flow_from_directory(
-                directory='../data/raw/test',
-                color_mode='rgb',
-                class_mode='binary',
-                shuffle=False
-            )
-            y_test = test_generator.classes
+            test_generator = get_test_generators(config)
+        elif model_path.stem == 'cnn':
+            test_generator = get_test_generators(config, grayscale=True)
+
+        y_test = test_generator.classes
 
         y_pred_proba = model.predict(test_generator)
         y_pred = (y_pred_proba > config['hyperparameters']['threshold']).astype('int32')
