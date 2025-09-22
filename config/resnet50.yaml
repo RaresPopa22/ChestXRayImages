@@ -8,4 +8,3 @@ hyperparameters:
   epochs: 100
   batch_size: 32
   class_weight: 'balanced'
-  threshold: 0.75

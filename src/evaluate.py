@@ -1,19 +1,16 @@
-import pandas as pd
-
 from pathlib import Path
+
+import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import precision_recall_curve, average_precision_score, classification_report, roc_auc_score, \
     f1_score
-
-from src.data_processing import preprocess_test_data, get_test_generators
-from src.util import parse_args_and_get_config, plot_precision_recall_curve, find_best_threshold
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+from src.data_processing import get_test_generators
+from src.util import parse_args_and_get_config, plot_precision_recall_curve, find_best_threshold
 
 
 def evaluate(config, model_paths):
-    X_test, y_test = preprocess_test_data(config)
-    test_generator = X_test
-
     results, precisions, recalls, labels, auprcs = [], [], [], [], []
 
     for path in model_paths:

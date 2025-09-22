@@ -13,7 +13,7 @@ def build_cnn_model(config):
     input_shape = (target_size, target_size, 1)
 
     input_img = tf.keras.layers.Input(shape=input_shape)
-    x = tf.keras.layers.ZeroPadding2D(padding=(3,3))(input_img)
+    x = tf.keras.layers.ZeroPadding2D(padding=(3, 3))(input_img)
 
     x = tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='same', strides=2)(x)
     x = tf.keras.layers.BatchNormalization()(x)
