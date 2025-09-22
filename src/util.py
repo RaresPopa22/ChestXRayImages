@@ -1,7 +1,9 @@
 import argparse
 
+import numpy as np
 import yaml
 from matplotlib import pyplot as plt
+from sklearn.metrics import f1_score
 
 
 def read_config(path):
@@ -46,3 +48,20 @@ def plot_precision_recall_curve(recalls, precisions, labels, auprcs):
     ax.set_title('Precision-Recall Curve for Chest X-Ray Images', fontsize=16)
     ax.legend(loc='lower left')
     plt.show()
+
+
+def find_best_threshold(y_true, y_pred_proba):
+    best_threshold = 0
+    best_f1 = 0
+    thresholds = np.arange(0.01, 1.0, 0.01)
+
+    for threshold in thresholds:
+        y_pred = (y_pred_proba >= threshold).astype(int)
+        current_f1 = f1_score(y_true, y_pred)
+
+        if current_f1 > best_f1:
+            best_f1 = current_f1
+            best_threshold = threshold
+
+    print(f'Best F1-Score: {best_f1:.4f} found at threshold: {best_threshold:.2f}')
+    return best_threshold

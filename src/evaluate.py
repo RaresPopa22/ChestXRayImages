@@ -6,7 +6,7 @@ from sklearn.metrics import precision_recall_curve, average_precision_score, cla
     f1_score
 
 from src.data_processing import preprocess_test_data, get_test_generators
-from src.util import parse_args_and_get_config, plot_precision_recall_curve
+from src.util import parse_args_and_get_config, plot_precision_recall_curve, find_best_threshold
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
@@ -28,7 +28,9 @@ def evaluate(config, model_paths):
         y_test = test_generator.classes
 
         y_pred_proba = model.predict(test_generator)
-        y_pred = (y_pred_proba > config['hyperparameters']['threshold']).astype('int32')
+
+        optimal_threshold = find_best_threshold(y_test, y_pred_proba)
+        y_pred = (y_pred_proba > optimal_threshold).astype('int32')
         class_labels = ['NORMAL', 'PNEUMONIA']
         report = classification_report(y_test, y_pred, target_names=[class_labels[0], class_labels[1]])
         print(f'Printing the report for {model_path.stem}')
