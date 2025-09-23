@@ -29,10 +29,9 @@ def parse_args_and_get_config(stage):
         args = parser.parse_args()
         return read_configs(base_config, args.config)
     elif stage == 'evaluate':
-        parser.add_argument('--config', required=True, help='Path to configuration file')
         parser.add_argument('--models', nargs="+", required=True, help='Paths to model files')
         args = parser.parse_args()
-        return read_configs(base_config, args.config), args.models
+        return read_config(base_config), args.models
     else:
         raise ValueError("Unknown stage. Only 'train' and 'evaluate' supported so far")
 

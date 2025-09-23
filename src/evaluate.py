@@ -19,7 +19,7 @@ def evaluate(config, model_paths):
 
         if model_path.stem == 'resnet50':
             test_generator = get_test_generators(config)
-        elif model_path.stem == 'cnn':
+        elif model_path.stem in {'cnn', 'base_cnn'}:
             test_generator = get_test_generators(config, grayscale=True)
 
         y_test = test_generator.classes

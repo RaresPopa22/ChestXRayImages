@@ -95,6 +95,8 @@ Because of their large size, the pre-trained models were not pushed upstream. To
 
 In order to train a model, run the `train.py` script with the desired configuration:
 
+* Train base CNN model: 
+    `python -m src.train --config config/base_cnn.yaml`
 * Train CNN model: 
     `python -m src.train --config config/cnn.yaml`
 * Train ResNet50 model:
@@ -104,7 +106,7 @@ In order to train a model, run the `train.py` script with the desired configurat
 #### Evaluating the models
 
 After training, you can evaluate and compare the models using the evaluate.py script:
-    `python -m src.evaluate --models models/cnn.keras models/resnet50.keras --config config/cnn.yaml`
+    `python -m src.evaluate --models models/cnn.keras models/resnet50.keras models/base_cnn.keras`
 
 This will print a classification report for each model, a comparison summary, and will plot a Precision-Recall curve plot.
 
@@ -113,7 +115,7 @@ This will print a classification report for each model, a comparison summary, an
 This project uses YAML files for configuration, making it easy to manage model parameters and data paths.
 
 * `base_config.yaml` contains the base configuration, including data paths
-* `cnn.yaml`, `resnet50.yaml` contains model-specific parameters
+* `cnn.yaml`, `resnet50.yaml` and `base_cnn.yaml` contains model-specific parameters
 
 ### Model Performance
 
@@ -124,44 +126,66 @@ The table below summarizes the performance of the trained models:
 
 
 | Model    | AUPRC  | ROC AUC | Recall (Pneumonia) | Precision (Pneumonia) | F1-Score (Pneumonia) |
-|----------|--------|---------|--------------------|------------------|------------------|
-| cnn      | 0.8788 | 0.8761  | 0.92               | 0.90 |  0.91 |
-| resnet50 | 0.8751 | 0.8744  | 0.94               | 0.89 |  0.92 |
+|----------|--------|---------|--------------------|-----------------------|----------------------|
+| cnn      | 0.8783 | 0.8801  | 0.97               | 0.89                  | 0.93                 |
+| resnet50 | 0.8842 | 0.8812  | 0.92               | 0.91                  | 0.91                 |
+| base_cnn | 0.65   | 0.5513  | 1.00               | 0.65                  | 0.79                 |
 
 Here are the detailed classification reports:
 
 #### CNN
 ```
-Best F1-Score: 0.9114 found at threshold: 0.95
+Best F1-Score: 0.9252 found at threshold: 0.51
 Printing the report for cnn
               precision    recall  f1-score   support
 
-      NORMAL       0.87      0.83      0.85       234
-   PNEUMONIA       0.90      0.92      0.91       390
+      NORMAL       0.93      0.79      0.86       234
+   PNEUMONIA       0.89      0.97      0.93       390
 
-    accuracy                           0.89       624
-   macro avg       0.88      0.88      0.88       624
-weighted avg       0.89      0.89      0.89       624
+    accuracy                           0.90       624
+   macro avg       0.91      0.88      0.89       624
+weighted avg       0.90      0.90      0.90       624
 ```
 
 #### ResNet50
 
 ```
-Best F1-Score: 0.9152 found at threshold: 0.78
+Best F1-Score: 0.9135 found at threshold: 0.99
 Printing the report for resnet50
               precision    recall  f1-score   support
 
-      NORMAL       0.89      0.81      0.85       234
-   PNEUMONIA       0.89      0.94      0.92       390
+      NORMAL       0.86      0.84      0.85       234
+   PNEUMONIA       0.91      0.92      0.91       390
 
     accuracy                           0.89       624
-   macro avg       0.89      0.87      0.88       624
+   macro avg       0.89      0.88      0.88       624
 weighted avg       0.89      0.89      0.89       624
+
+```
+#### BASE CNN
+```
+Best F1-Score: 0.7879 found at threshold: 0.99
+Printing the report for base_cnn
+              precision    recall  f1-score   support
+
+      NORMAL       1.00      0.10      0.19       234
+   PNEUMONIA       0.65      1.00      0.79       390
+
+    accuracy                           0.66       624
+   macro avg       0.82      0.55      0.49       624
+weighted avg       0.78      0.66      0.56       624
+```
+And the final report:
+```
+   AUPRC  ROC AUC  F1-Score (PNEUMONIA)
+0.878324 0.880769              0.925153
+0.884185 0.881197              0.913486
+0.650000 0.551282              0.787879
 ```
 
-Both models perform well, with the ResNet50 model having a slight edge in the F1-Score for the 'Pneumonia' class. The high
+Both models perform well, with the CNN model having a slight edge in the F1-Score for the 'Pneumonia' class. The high
 precision and recall scores indicate that the models are effective at distinguishing between normal and pneumonia X-rays.
 
-I will end this section with the Precision-Recall curve for both models:
+I will end this section with the Precision-Recall curve for all models:
 
-![img.png](img.png)
+![img_1.png](img_1.png)

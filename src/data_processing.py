@@ -44,8 +44,7 @@ def get_training_generators(config, grayscale=False):
         shear_range=0.1,
         zoom_range=0.1,
         horizontal_flip=False,
-        fill_mode='nearest',
-        validation_split=0.2)
+        fill_mode='nearest')
 
     valid_datagen = ImageDataGenerator(rescale=1. / 255)
 

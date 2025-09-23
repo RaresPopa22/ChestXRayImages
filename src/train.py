@@ -3,7 +3,8 @@ from sklearn.utils import compute_class_weight
 from tensorflow.keras.optimizers import Adam
 
 from src.data_processing import get_training_generators
-from src.model import build_cnn_model, get_early_stopping, get_model_checkpoint, build_resnet_50, get_lr_scheduler
+from src.model import build_cnn_model, get_early_stopping, get_model_checkpoint, build_resnet_50, get_lr_scheduler, \
+    build_base_cnn_model
 from src.util import parse_args_and_get_config
 
 
@@ -13,6 +14,9 @@ def train(config):
     if model_name == 'cnn':
         train_generator, val_generator = get_training_generators(config, grayscale=True)
         model = build_cnn_model(config)
+    elif model_name == 'base_cnn':
+        train_generator, val_generator = get_training_generators(config, grayscale=True)
+        model = build_base_cnn_model(config)
     elif model_name == 'resnet50':
         train_generator, val_generator = get_training_generators(config)
         model = build_resnet_50(config)
@@ -37,7 +41,7 @@ def train(config):
         train_generator,
         epochs=hyperparameters['epochs'],
         validation_data=val_generator,
-        class_weight=class_weight_dict if model_name == 'resnet50' else None,
+        class_weight=class_weight_dict,
         callbacks=[early_stopping, model_checkpoint, lr_scheduler]
     )
 
