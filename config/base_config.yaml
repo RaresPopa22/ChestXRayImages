@@ -1,7 +1,7 @@
 data_paths:
   raw_data:
     target_size: 256
-    path: '../data/raw'
+    path: 'data/raw'
 
 metadata:
   minority_class: 0

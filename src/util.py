@@ -21,7 +21,7 @@ def read_configs(base_path, specific_path):
 
 
 def parse_args_and_get_config(stage):
-    base_config = "../config/base_config.yaml"
+    base_config = "config/base_config.yaml"
     parser = argparse.ArgumentParser()
 
     if stage == 'train':

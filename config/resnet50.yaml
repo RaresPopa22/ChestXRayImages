@@ -1,8 +1,8 @@
 model_name: 'resnet50'
 
 model_output_paths:
-  dir: '../models'
-  model: '../models/resnet50.keras'
+  dir: 'models'
+  model: 'models/resnet50.keras'
 
 hyperparameters:
   epochs: 100
