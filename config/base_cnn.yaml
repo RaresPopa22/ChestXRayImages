@@ -2,9 +2,12 @@ model_name: 'base_cnn'
 
 model_output_paths:
   dir: 'models'
-  model: 'models/base_cnn.keras'
+  model: 'models/base_cnn.pt'
 
 hyperparameters:
   epochs: 100
-  batch_size: 32
-  class_weight: 'balanced'
+  batch_size: 128
+  learning_rate: 0.001
+  lr_scheduler_patience: 3
+  lr_threshold: 0.01
+  patience: 10

@@ -1,92 +1,142 @@
-from pathlib import Path
+import logging
+import time
 
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
-from pandas import DataFrame
+import torch
 from sklearn.model_selection import train_test_split
+from torchvision.transforms import Compose, Resize, RandomRotation, RandomAffine, RandomResizedCrop, ToTensor, Grayscale, Normalize
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader, Dataset, Subset
 
 
-def create_data_blueprint(config):
-    raw_config = config['data_paths']['raw_data']
-    base_path = Path(raw_config['path']) / 'train'
-    class_names = [d.name for d in base_path.iterdir() if d.is_dir()]
+class DatasetWrapper(Dataset):
+    def __init__(self, subset, transform):
+        super().__init__()
+        self.subset = subset
+        self.transform = transform
 
-    filepaths = []
-    labels = []
+    def __len__(self):
+        return len(self.subset)
+    
+    def __getitem__(self, idx):
+        image, label = self.subset[idx]
 
-    for class_name in class_names:
-        class_dir = base_path / class_name
-        for file in class_dir.glob('*'):
-            filepaths.append(str(file))
-            labels.append(class_name)
+        if self.transform:
+            image = self.transform(image)
 
-    df = DataFrame({'filepath': filepaths, 'label': labels})
-    return df
+        return image, label
+    
 
+def get_data_and_idxs(config):
+    data = ImageFolder(config['data_paths']['raw_data']['training_data_path'])
+    indices = list(range(len(data)))
+    split_percentage = config['split']['val_percent']
+    train_idxs, val_idxs = train_test_split(indices, stratify=data.targets, test_size=split_percentage, random_state=1)
 
-def get_data_and_split(config):
-    df = create_data_blueprint(config)
-    print("Blueprint created. Total images found:", len(df))
-    print(df.head())
-    train_df, valid_df = train_test_split(
-        df, test_size=config['split']['val_percent'], stratify=df['label'], random_state=1)
-
-    return train_df, valid_df
+    return data, train_idxs, val_idxs
 
 
-def get_training_generators(config, grayscale=False):
-    train_df, valid_df = get_data_and_split(config)
-
-    train_datagen = ImageDataGenerator(
-        rescale=1. / 255,
-        rotation_range=10,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        shear_range=0.1,
-        zoom_range=0.1,
-        horizontal_flip=False,
-        fill_mode='nearest')
-
-    valid_datagen = ImageDataGenerator(rescale=1. / 255)
+def compute_mean_and_std(data, train_idxs, config, grayscale=True):
+    logger = logging.getLogger(__name__)
+    logger.info('Computing mean and standard deviation on the training set...')
+    start = time.time()
 
     target_size = config['data_paths']['raw_data']['target_size']
     batch_size = config['hyperparameters']['batch_size']
+    num_workers = config['num_workers']
 
-    train_generator = train_datagen.flow_from_dataframe(
-        dataframe=train_df,
-        x_col='filepath',
-        y_col='label',
-        color_mode='grayscale' if grayscale else 'rgb',
-        target_size=(target_size, target_size),
-        batch_size=batch_size,
-        class_mode='binary',
-        shuffle=True
+    deterministic_transform_list = [
+        Resize((target_size, target_size)),
+        ToTensor()
+    ]
+
+    if grayscale:
+        deterministic_transform_list.insert(0, Grayscale())
+        sum_pixels = torch.tensor(0.0)
+        sum_squares = torch.tensor(0.0)
+    else:
+        sum_pixels = torch.zeros(3)
+        sum_squares = torch.zeros(3)
+    
+    deterministic_transform = Compose(deterministic_transform_list)
+    training_dataset = DatasetWrapper(Subset(data, train_idxs), deterministic_transform)
+    training_data_loader = DataLoader(training_dataset, batch_size, shuffle=False, num_workers=num_workers)
+
+    N = 0.0
+    for batch_X, _ in training_data_loader:
+        if grayscale:
+            sum_pixels += batch_X.sum()
+            sum_squares += (batch_X ** 2).sum()
+            N += batch_X.nelement()
+        else:
+            sum_pixels += batch_X.sum(dim=[0, 2, 3])
+            sum_squares += (batch_X ** 2).sum(dim=[0, 2, 3])
+            N += batch_X.shape[0] * batch_X.shape[2] * batch_X.shape[3]
+
+    mean = sum_pixels / N
+    std_squared = (1 / N) * sum_squares - mean ** 2
+    std = torch.sqrt(std_squared)
+    
+
+    logger.info(f'Done: mean={mean} and std={std} in {time.time() - start} seconds')
+    path = config['data_paths']['processed']['mean_and_std_gray'] if grayscale else config['data_paths']['processed']['mean_and_std_color']
+    torch.save({'mean': mean, 'std': std}, path)
+
+    return mean, std
+
+
+def get_train_val_data(config, data, train_idxs, val_idxs, mean, std, grayscale=True):
+    target_size = config['data_paths']['raw_data']['target_size']
+    batch_size = config['hyperparameters']['batch_size']
+
+    training_transform_list = [
+        RandomAffine(10, translate=(0.1, 0.1), shear=5.7),
+        RandomResizedCrop(size=target_size ,scale=(0.9, 1)),
+        ToTensor(),
+        Normalize(mean, std)
+    ]
+
+    eval_transform_list = [
+        Resize((target_size, target_size)),
+        ToTensor(),
+        Normalize(mean, std)
+    ]
+
+    if grayscale:
+        training_transform_list.insert(0, Grayscale())
+        eval_transform_list.insert(0, Grayscale())
+
+    training_transform = Compose(training_transform_list)
+    eval_transform = Compose(eval_transform_list)
+
+    training_wrapper = DatasetWrapper(Subset(data, train_idxs), training_transform)
+    eval_wrapper = DatasetWrapper(Subset(data, val_idxs), eval_transform)
+    
+    training_set = DataLoader(training_wrapper, batch_size, shuffle=True, num_workers=config['num_workers'], persistent_workers=True)
+    eval_set = DataLoader(eval_wrapper, batch_size, shuffle=False, num_workers=config['num_workers'], persistent_workers=True)
+
+    return training_set, eval_set
+
+
+def get_test_data(config, mean, std, grayscale=True):
+    target_size = config['data_paths']['raw_data']['target_size']
+    batch_size = config['hyperparameters']['batch_size']
+
+    test_transform_list = [
+        Resize((target_size, target_size)),
+        ToTensor(),
+        Normalize(mean, std)
+    ]
+
+    if grayscale:
+        test_transform_list.insert(0, Grayscale())
+
+    test_transform = Compose(test_transform_list)
+    data = ImageFolder(config['data_paths']['raw_data']['test_data_path'], transform=test_transform)
+
+    return DataLoader(
+        data, 
+        batch_size, 
+        shuffle=False,  
+        num_workers=config['num_workers'], 
+        persistent_workers=True
     )
-
-    val_generator = valid_datagen.flow_from_dataframe(
-        dataframe=valid_df,
-        x_col='filepath',
-        y_col='label',
-        color_mode='grayscale' if grayscale else 'rgb',
-        target_size=(target_size, target_size),
-        class_mode='binary',
-        batch_size=batch_size,
-        shuffle=False
-    )
-
-    return train_generator, val_generator
-
-
-def get_test_generators(config, grayscale=False):
-    raw_config = config['data_paths']['raw_data']
-    test_path = Path(raw_config['path']) / 'test'
-
-    datagen = ImageDataGenerator(rescale=1. / 255)
-
-    test_generator = datagen.flow_from_directory(
-        directory=test_path,
-        color_mode='grayscale' if grayscale else 'rgb',
-        class_mode='binary',
-        shuffle=False
-    )
-
-    return test_generator
