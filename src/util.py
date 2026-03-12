@@ -61,6 +61,18 @@ def plot_precision_recall_curve(recalls, precisions, labels, auprcs):
     plt.savefig('PRAUC.jpg')
 
 
+def plot_learning_curve(training_cost, eval_cost, model_name):
+    plt.figure(figsize=(6, 6))
+    plt.plot(training_cost)
+    plt.plot(eval_cost)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Learning curve')
+    plt.legend(['training', 'eval'])
+    plt.savefig(f'learning_curve_{model_name}.jpg')
+
+
+
 def find_best_threshold(y_true, y_pred_proba, beta):
     precision, recall, threshold = precision_recall_curve(y_true, y_pred_proba)
     f1_score = (1 + beta**2) * precision[:-1] * recall [:-1] / (beta**2 * precision[:-1] + recall[:-1] + 1e-8)

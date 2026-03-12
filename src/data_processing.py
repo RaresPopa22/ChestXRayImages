@@ -1,3 +1,4 @@
+from collections import Counter
 import logging
 import time
 
@@ -114,7 +115,22 @@ def get_train_val_data(config, data, train_idxs, val_idxs, mean, std, grayscale=
     training_set = DataLoader(training_wrapper, batch_size, shuffle=True, num_workers=config['num_workers'], persistent_workers=True)
     eval_set = DataLoader(eval_wrapper, batch_size, shuffle=False, num_workers=config['num_workers'], persistent_workers=True)
 
-    return training_set, eval_set
+    return training_set, eval_set, get_imbalance_ratio(training_set)
+
+
+def get_mean_and_std(config, data, train_idxs, grayscale=True):
+    try:
+        path = config['data_paths']['processed']['mean_and_std_gray'] if grayscale else config['data_paths']['processed']['mean_and_std_color']
+        mean_and_std_dict = torch.load(path)
+        return mean_and_std_dict.get('mean'), mean_and_std_dict.get('std')
+    except FileNotFoundError:
+        return compute_mean_and_std(data, train_idxs, config, grayscale)
+
+
+def load_training_data(config, grayscale=True):
+    data, train_idxs, val_idxs = get_data_and_idxs(config)
+    mean, std = get_mean_and_std(config, data, train_idxs, grayscale)
+    return get_train_val_data(config, data, train_idxs, val_idxs, mean, std, grayscale)
 
 
 def get_test_data(config, mean, std, grayscale=True):
@@ -140,3 +156,12 @@ def get_test_data(config, mean, std, grayscale=True):
         num_workers=config['num_workers'], 
         persistent_workers=True
     )
+
+
+def get_imbalance_ratio(training_set):
+    all_data = training_set.dataset.subset.dataset.targets
+    train_idxs = training_set.dataset.subset.indices
+    training_data = (all_data[i] for i in train_idxs)
+    label_counts = Counter(training_data)
+    imbalance_ratio = label_counts[0] / label_counts[1]
+    return imbalance_ratio
