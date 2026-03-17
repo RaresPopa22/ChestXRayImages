@@ -2,9 +2,22 @@ model_name: 'base_cnn'
 
 model_output_paths:
   dir: 'models'
-  model: 'models/base_cnn.keras'
+  model: 'models/base_cnn.pt'
 
 hyperparameters:
   epochs: 100
-  batch_size: 32
-  class_weight: 'balanced'
+  batch_size: 128
+  learning_rate: .001
+  lr_scheduler:
+    T_max: 100
+    eta_min: .00001
+  patience: 10
+  use_amp: True
+  weight_decay: .0001
+  layer_1_dropout: .05
+  layer_2_dropout: .1
+  layer_3_dropout: .2
+  layer_4_dropout: .3
+  grad_cam_example_size: 5
+
+optimal_threshold: 0.37587299942970276

@@ -127,40 +127,40 @@ The table below summarizes the performance of the trained models:
 
 | Model    | AUPRC  | ROC AUC | Recall (Pneumonia) | Precision (Pneumonia) | F1-Score (Pneumonia) |
 |----------|--------|---------|--------------------|-----------------------|----------------------|
-| cnn      | 0.8783 | 0.8801  | 0.97               | 0.89                  | 0.93                 |
-| resnet50 | 0.8842 | 0.8812  | 0.92               | 0.91                  | 0.91                 |
-| base_cnn | 0.65   | 0.5513  | 1.00               | 0.65                  | 0.79                 |
+| resnet50 | 0.968 | 0.958  | 0.98               | 0.91                  | 0.92                 |
+| base_cnn | 0.966   | 0.953  | 0.98               | 0.86                  | 0.92                 |
 
 Here are the detailed classification reports:
 
 #### CNN
 ```
-Best F1-Score: 0.9252 found at threshold: 0.51
-Printing the report for cnn
+INFO:__main__:Using optimal threshold=0.37587299942970276
+INFO:__main__:Classification report for base_cnn
+INFO:__main__:
               precision    recall  f1-score   support
 
-      NORMAL       0.93      0.79      0.86       234
-   PNEUMONIA       0.89      0.97      0.93       390
+      NORMAL       0.96      0.75      0.84       234
+   PNEUMONIA       0.87      0.98      0.92       390
 
-    accuracy                           0.90       624
-   macro avg       0.91      0.88      0.89       624
-weighted avg       0.90      0.90      0.90       624
+    accuracy                           0.89       624
+   macro avg       0.91      0.87      0.88       624
+weighted avg       0.90      0.89      0.89       624
 ```
 
 #### ResNet50
 
 ```
-Best F1-Score: 0.9135 found at threshold: 0.99
-Printing the report for resnet50
+INFO:__main__:Using optimal threshold=0.23028059303760529
+INFO:__main__:Classification report for resnet50
+INFO:__main__:
               precision    recall  f1-score   support
 
-      NORMAL       0.86      0.84      0.85       234
-   PNEUMONIA       0.91      0.92      0.91       390
+      NORMAL       0.96      0.74      0.84       234
+   PNEUMONIA       0.86      0.98      0.92       390
 
     accuracy                           0.89       624
-   macro avg       0.89      0.88      0.88       624
-weighted avg       0.89      0.89      0.89       624
-
+   macro avg       0.91      0.86      0.88       624
+weighted avg       0.90      0.89      0.89       624
 ```
 #### BASE CNN
 ```
@@ -183,9 +183,51 @@ And the final report:
 0.650000 0.551282              0.787879
 ```
 
-Both models perform well, with the CNN model having a slight edge in the F1-Score for the 'Pneumonia' class. The high
-precision and recall scores indicate that the models are effective at distinguishing between normal and pneumonia X-rays.
+Both models perform well, with the resnet50 model having a slight edge in the AUPRC, but base_cnn having a slight better precision. The high precision and recall scores indicate that the models are effective at distinguishing between normal and pneumonia X-rays. This also points to
+the fact that we don't need a deep neural network here, as the real constraint is the dataset, for training we have around 5k images. Training
+a simple model from scratch proved to be very close to a top notch fined tuned model like resnet50.
 
-I will end this section with the Precision-Recall curve for all models:
+![outputs/PRAUC.png](outputs/PRAUC.png)
 
-![img_1.png](img_1.png)
+Having in mind that we are on the eval subject, here are the confusion matrices for both models. Based on this I would say BaseCNN wins by a
+whisker, recalling one extra Pneumonia case, which real world, it means more than just a number. Also BaseCNN has a better precision for the
+positive case.
+
+#### Base_CNN
+![outputs/base_cnn_confusion_matrix.png](outputs/base_cnn_confusion_matrix.png)
+
+#### Resnet50
+![outputs/resnet50_confusion_matrix.png](outputs/resnet50_confusion_matrix.png)
+
+
+In the end of this chapter, I will like to present here the learning curves for both models. You can see that resnet50 had already very good initial weights, as its
+learning curve is smoother for both training and eval. On the other hand for the base_cnn we have a jumpy learning curve for eval, and this
+is because of the very small eval set that we used here, around 1k images.
+
+#### Base_CNN
+![outputs/learning_curve_base_cnn.png](outputs/learning_curve_base_cnn.png)
+
+#### Resnet50
+![outputs/learning_curve_resnet50.png](outputs/learning_curve_resnet50.png)
+
+### Grad-Cam
+
+Let's take a look at why our two models made a particular decision, or at least try to guess. We'll do that using the heatmap
+that highlights the regions that were the most important in the prediction.
+
+We ran 10 examples, 5 positive, patient had pneumonia, and 5 negative, normal lungs. Anyone is invited to draw their own conclusions but here is what I made of this little experiment:
+
+#### BASE CNN
+- on pneumonia cases, it focuses on the left side of the patient, in the lower left lung area
+- on 1.png it highlights the shoulder area, which is not clinically meaningful at all, the model
+may pick up on non important medical stuff
+- on normal cases, it highlights the abdomen area, it might have learned if a bright central structure exists, then the patient has clear lungs
+- it shows how fragile the model heuristics are
+
+#### RESNET50
+- on normal cases it shows almost no activation, which is a very good principle
+- on pneumonia cases, it has an erratic hotspot pattern, it even focuses on the armpit areas in some examples
+- it also misclassified 0.png, in there we can see it looks at the edges of the image
+
+I think BaseCNN once again shows a better predictive behavior overall, being more consistently confident. But at the end of the day neither model is reliably looking at the right thing every time.
+

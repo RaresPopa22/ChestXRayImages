@@ -1,187 +1,70 @@
-import numpy as np
-import tensorflow as tf
-from keras.src.applications.resnet import ResNet50
-from keras.src.callbacks import EarlyStopping, ModelCheckpoint
-from sklearn.utils import compute_class_weight
-from tensorflow.keras.callbacks import ReduceLROnPlateau
-from tensorflow.keras.initializers import glorot_uniform
+import torch.nn as nn
 
+class BaseCNN(nn.Module):
 
-def build_base_cnn_model(config):
-    raw_config = config['data_paths']['raw_data']
-    target_size = raw_config['target_size']
-    input_shape = (target_size, target_size, 1)
+    def __init__(self, config):
+        super().__init__()
+        hyperparam_config = config['hyperparameters']
+        self.layer_1 = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=7, padding=3, stride=2),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Dropout2d(hyperparam_config['layer_1_dropout']),
+            nn.MaxPool2d(kernel_size=2, stride=2, padding=0),
+        )
 
-    input_img = tf.keras.layers.Input(shape=input_shape)
-    x = tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(input_img)
-    x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+        self.layer_2 = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding='same', stride=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Dropout2d(hyperparam_config['layer_2_dropout']),
+            nn.MaxPool2d(kernel_size=2, stride=2, padding=0),
+        )
 
-    x = tf.keras.layers.Conv2D(filters=64, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(x)
-    x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+        self.layer_3_a = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding='same', stride=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Dropout2d(hyperparam_config['layer_3_dropout']),
+            nn.MaxPool2d(kernel_size=2, stride=2, padding=0),
+        )
 
-    x = tf.keras.layers.Conv2D(filters=128, kernel_size=(3, 3), padding='same', strides=(1, 1), activation='relu')(x)
-    x = tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2), padding='same')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+        self.layer_3_b = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding='same', stride=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.Dropout2d(hyperparam_config['layer_3_dropout']),
+            nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        )
 
-    f = tf.keras.layers.Flatten()(x)
-    dense = tf.keras.layers.Dense(units=128, activation='relu')(f)
-    dropout = tf.keras.layers.Dropout(0.5)(dense)
-    outputs = tf.keras.layers.Dense(units=1, activation='sigmoid')(dropout)
+        self.layer_3_c = nn.Sequential(
+            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, padding='same', stride=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            nn.Dropout2d(hyperparam_config['layer_3_dropout']),
+            nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        )
 
-    model = tf.keras.Model(inputs=input_img, outputs=outputs)
+        self.fc1 = nn.Linear(512, 512)
 
-    return model
+        self.layer_4 = nn.Sequential(
+            self.fc1,
+            nn.ReLU(),
+            nn.Dropout(hyperparam_config['layer_4_dropout'])
+        )
 
+        self.fc2 = nn.Linear(512, 1)
 
-def build_cnn_model(config):
-    raw_config = config['data_paths']['raw_data']
-    target_size = raw_config['target_size']
-    input_shape = (target_size, target_size, 1)
+        self.layer_5 = nn.Sequential(
+            self.fc2
+        )
 
-    input_img = tf.keras.layers.Input(shape=input_shape)
-    x = tf.keras.layers.ZeroPadding2D(padding=(3, 3))(input_img)
-
-    x = tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='same', strides=2)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Activation('relu')(x)
-    x = tf.keras.layers.MaxPool2D(pool_size=3, strides=2)(x)
-
-    x = convolutional_block(x, f=3, filters=[64, 64, 256], s=1)
-    x = identity_block(x, f=3, filters=[64, 64, 256])
-    x = identity_block(x, f=3, filters=[64, 64, 256])
-
-    x = convolutional_block(x, f=3, filters=[128, 128, 512], s=2)
-
-    x = identity_block(x, f=3, filters=[128, 128, 512])
-    x = identity_block(x, f=3, filters=[128, 128, 512])
-    x = identity_block(x, f=3, filters=[128, 128, 512])
-
-    x = convolutional_block(x, f=3, filters=[256, 256, 1024], s=2)
-
-    x = identity_block(x, f=3, filters=[256, 256, 1024])
-    x = identity_block(x, f=3, filters=[256, 256, 1024])
-    x = identity_block(x, f=3, filters=[256, 256, 1024])
-    x = identity_block(x, f=3, filters=[256, 256, 1024])
-    x = identity_block(x, f=3, filters=[256, 256, 1024])
-
-    x = convolutional_block(x, f=3, filters=[512, 512, 2048], s=2)
-
-    x = identity_block(x, f=3, filters=[512, 512, 2048])
-    x = identity_block(x, f=3, filters=[512, 512, 2048])
-
-    f = tf.keras.layers.GlobalAveragePooling2D()(x)
-    outputs = tf.keras.layers.Dense(units=1, activation='sigmoid', kernel_initializer=glorot_uniform(0))(f)
-
-    model = tf.keras.Model(inputs=input_img, outputs=outputs)
-
-    return model
-
-
-def convolutional_block(x, f, filters, s=2, initializer=glorot_uniform):
-    f1, f2, f3 = filters
-    x_shortcut = x
-
-    x = tf.keras.layers.Conv2D(
-        filters=f1, kernel_size=1, padding='valid', strides=s, kernel_initializer=initializer(0))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Activation('relu')(x)
-
-    x = tf.keras.layers.Conv2D(
-        filters=f2, kernel_size=f, padding='same', strides=1, kernel_initializer=initializer(0))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Activation('relu')(x)
-
-    x = tf.keras.layers.Conv2D(
-        filters=f3, kernel_size=1, padding='valid', strides=1, kernel_initializer=initializer(0))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-
-    x_shortcut = tf.keras.layers.Conv2D(
-        filters=f3, kernel_size=1, padding='same', strides=s, kernel_initializer=initializer(0))(x_shortcut)
-    x_shortcut = tf.keras.layers.BatchNormalization()(x_shortcut)
-
-    x = tf.keras.layers.Add()([x, x_shortcut])
-    x = tf.keras.layers.Activation('relu')(x)
-
-    return x
-
-
-def identity_block(x, f, filters, initializer=glorot_uniform):
-    f1, f2, f3 = filters
-    x_shortcut = x
-
-    x = tf.keras.layers.Conv2D(
-        filters=f1, kernel_size=1, padding='valid', strides=1, kernel_initializer=initializer(0))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Activation('relu')(x)
-
-    x = tf.keras.layers.Conv2D(
-        filters=f2, kernel_size=f, padding='same', strides=1, kernel_initializer=initializer(0))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Activation('relu')(x)
-
-    x = tf.keras.layers.Conv2D(
-        filters=f3, kernel_size=1, padding='valid', strides=1, kernel_initializer=initializer(0))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-
-    x = tf.keras.layers.Add()([x, x_shortcut])
-    x = tf.keras.layers.Activation('relu')(x)
-
-    return x
-
-
-def build_resnet_50(config):
-    raw_config = config['data_paths']['raw_data']
-    target_size = raw_config['target_size']
-    input_shape = (target_size, target_size, 3)
-    base_model = ResNet50(weights='imagenet', include_top=False, input_shape=input_shape)
-    base_model.trainable = False
-
-    for layer in base_model.layers[-20:]:
-        layer.trainable = True
-
-    x = base_model.output
-    x = tf.keras.layers.GlobalAveragePooling2D()(x)
-    x = tf.keras.layers.Dropout(rate=0.2)(x)
-    outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
-
-    model = tf.keras.Model(inputs=base_model.input, outputs=outputs)
-
-    return model
-
-
-def get_early_stopping():
-    return EarlyStopping(
-        monitor='val_loss',
-        patience=5,
-        restore_best_weights=True
-    )
-
-
-def get_model_checkpoint(config):
-    return ModelCheckpoint(
-        filepath=config['model_output_paths']['model'],
-        save_best_only=True,
-        monitor='val_loss'
-    )
-
-
-def get_class_weight(config, y_train):
-    class_weights = compute_class_weight(
-        config['hyperparameters']['class_weight'],
-        classes=np.unique(y_train),
-        y=y_train
-    )
-
-    return dict(enumerate(class_weights))
-
-
-def get_lr_scheduler():
-    return ReduceLROnPlateau(
-        monitor='val_loss',
-        factor=0.2,
-        patience=2,
-        verbose=1,
-        min_lr=1e-6
-    )
+    def forward(self, x):
+        out = self.layer_1(x)
+        out = self.layer_2(out)
+        out = self.layer_3_a(out)
+        out = self.layer_3_b(out)
+        out = self.layer_3_c(out)
+        out = out.mean(dim=[2, 3])
+        out = self.layer_4(out)
+        return self.layer_5(out)

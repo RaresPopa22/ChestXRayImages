@@ -1,11 +1,19 @@
 data_paths:
   raw_data:
     target_size: 256
-    path: 'data/raw'
-
-metadata:
-  minority_class: 0
-  majority_class: 1
+    training_data_path: 'data/raw/chest_xray/train'
+    test_data_path: 'data/raw/chest_xray/test'
+  processed:
+    mean_and_std_gray: 'data/processed/mean_and_std_gray.pt'
+    mean_and_std_color: 'data/processed/mean_and_std_color.pt'
 
 split:
   val_percent: 0.20
+
+data_processing:
+  num_workers: 8
+
+f1_score:
+  beta: 2
+
+seed: 1
