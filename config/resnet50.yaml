@@ -13,3 +13,7 @@ hyperparameters:
   lr_threshold: 0.01
   patience: 10
   finetune_layers: ['layer4', 'fc']
+  use_amp: True
+  grad_cam_example_size: 5
+
+optimal_threshold: 0.23028059303760529

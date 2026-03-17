@@ -10,8 +10,10 @@ data_paths:
 split:
   val_percent: 0.20
 
-num_workers: 8
+data_processing:
+  num_workers: 8
+
+f1_score:
+  beta: 2
 
 seed: 1
-
-beta: 2

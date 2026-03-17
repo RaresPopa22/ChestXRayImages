@@ -1,9 +1,11 @@
 import argparse
+import os
 
 import numpy as np
+import torch
 import yaml
 from matplotlib import pyplot as plt
-from sklearn.metrics import f1_score, precision_recall_curve
+from sklearn.metrics import precision_recall_curve, confusion_matrix, ConfusionMatrixDisplay
 
 
 def read_config(path):
@@ -58,7 +60,9 @@ def plot_precision_recall_curve(recalls, precisions, labels, auprcs):
     plt.ylabel('Precision', fontsize=14)
     plt.title('Precision-Recall Curve for Chest X-Ray Images', fontsize=16)
     plt.legend(loc='lower left')
-    plt.savefig('PRAUC.jpg')
+
+    os.makedirs('outputs', exist_ok=True)
+    plt.savefig('outputs/PRAUC.png')
 
 
 def plot_learning_curve(training_cost, eval_cost, model_name):
@@ -69,13 +73,55 @@ def plot_learning_curve(training_cost, eval_cost, model_name):
     plt.ylabel('Loss')
     plt.title('Learning curve')
     plt.legend(['training', 'eval'])
-    plt.savefig(f'learning_curve_{model_name}.jpg')
 
+    os.makedirs('outputs', exist_ok=True)
+    plt.savefig(f'outputs/learning_curve_{model_name}.png')
+
+    
+def plot_confusion_matrix(y_test, predictions, model_name):
+    labels = ['NORMAL', 'PNEUMONIA']
+    cm = confusion_matrix(y_test, predictions, labels=[0, 1])
+    disp = ConfusionMatrixDisplay(cm, display_labels=[0, 1])
+    disp.plot()
+
+    plt.savefig(f'outputs/{model_name}_confusion_matrix.png')
+
+
+def plot_grad_cams(model_name, grad_cams):
+    os.makedirs(f'outputs/grad_cam/{model_name}', exist_ok=True)
+
+    if model_name == 'resnet50':
+        model_cmap = None
+    else:
+        model_cmap = 'gray'
+
+    for i in range(len(grad_cams)):
+        _, ax = plt.subplots(1, 2, figsize=(6, 6))
+        label, y_pred, img_np, upsampled_heatmap = grad_cams[i]
+        ax[0].imshow(img_np, cmap=model_cmap)
+        ax[0].axis('off')
+        ax[0].set_title('PNEUMONIA' if label == 1 else 'NORMAL')
+        ax[1].imshow(img_np, cmap=model_cmap)
+        ax[1].imshow(upsampled_heatmap, alpha=.5, cmap='coolwarm')
+        ax[1].axis('off')
+        ax[1].set_title('PNEUMONIA' if y_pred == 1 else 'NORMAL')
+
+        plt.savefig(f'outputs/grad_cam/{model_name}/{i}.png')
+        plt.close()
 
 
 def find_best_threshold(y_true, y_pred_proba, beta):
     precision, recall, threshold = precision_recall_curve(y_true, y_pred_proba)
-    f1_score = (1 + beta**2) * precision[:-1] * recall [:-1] / (beta**2 * precision[:-1] + recall[:-1] + 1e-8)
-    best_threshold_idx = np.argmax(f1_score)
+    f1 = (1 + beta**2) * precision[:-1] * recall [:-1] / (beta**2 * precision[:-1] + recall[:-1] + 1e-8)
+    best_threshold_idx = np.argmax(f1)
     
     return threshold[best_threshold_idx]
+
+
+def setup_device():
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    elif torch.backends.mps.is_available():
+        return torch.device('mps')
+    else:
+        return torch.device('cpu')

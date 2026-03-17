@@ -2,9 +2,10 @@ from collections import Counter
 import logging
 import time
 
+import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
-from torchvision.transforms import Compose, Resize, RandomRotation, RandomAffine, RandomResizedCrop, ToTensor, Grayscale, Normalize
+from torchvision.transforms import Compose, Resize, ColorJitter, RandomAffine, RandomResizedCrop, ToTensor, Grayscale, Normalize
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, Dataset, Subset
 
@@ -43,7 +44,7 @@ def compute_mean_and_std(data, train_idxs, config, grayscale=True):
 
     target_size = config['data_paths']['raw_data']['target_size']
     batch_size = config['hyperparameters']['batch_size']
-    num_workers = config['num_workers']
+    num_workers = config['data_processing']['num_workers']
 
     deterministic_transform_list = [
         Resize((target_size, target_size)),
@@ -92,6 +93,7 @@ def get_train_val_data(config, data, train_idxs, val_idxs, mean, std, grayscale=
     training_transform_list = [
         RandomAffine(10, translate=(0.1, 0.1), shear=5.7),
         RandomResizedCrop(size=target_size ,scale=(0.9, 1)),
+        ColorJitter(brightness=.2, contrast=.2),
         ToTensor(),
         Normalize(mean, std)
     ]
@@ -112,10 +114,14 @@ def get_train_val_data(config, data, train_idxs, val_idxs, mean, std, grayscale=
     training_wrapper = DatasetWrapper(Subset(data, train_idxs), training_transform)
     eval_wrapper = DatasetWrapper(Subset(data, val_idxs), eval_transform)
     
-    training_set = DataLoader(training_wrapper, batch_size, shuffle=True, num_workers=config['num_workers'], persistent_workers=True)
-    eval_set = DataLoader(eval_wrapper, batch_size, shuffle=False, num_workers=config['num_workers'], persistent_workers=True)
+    training_set = DataLoader(
+        training_wrapper, batch_size, shuffle=True, num_workers=config['data_processing']['num_workers'], persistent_workers=True
+        )
+    eval_set = DataLoader(
+        eval_wrapper, batch_size, shuffle=False, num_workers=config['data_processing']['num_workers'], persistent_workers=True
+        )
 
-    return training_set, eval_set, get_imbalance_ratio(training_set)
+    return training_set, eval_set, get_imbalance_ratio(data, train_idxs)
 
 
 def get_mean_and_std(config, data, train_idxs, grayscale=True):
@@ -153,14 +159,13 @@ def get_test_data(config, mean, std, grayscale=True):
         data, 
         batch_size, 
         shuffle=False,  
-        num_workers=config['num_workers'], 
+        num_workers=config['data_processing']['num_workers'], 
         persistent_workers=True
     )
 
 
-def get_imbalance_ratio(training_set):
-    all_data = training_set.dataset.subset.dataset.targets
-    train_idxs = training_set.dataset.subset.indices
+def get_imbalance_ratio(data, train_idxs):
+    all_data = data.targets
     training_data = (all_data[i] for i in train_idxs)
     label_counts = Counter(training_data)
     imbalance_ratio = label_counts[0] / label_counts[1]

@@ -8,3 +8,4 @@ data/raw/
 .vscode/
 data/processed/
 models/
+.venv
