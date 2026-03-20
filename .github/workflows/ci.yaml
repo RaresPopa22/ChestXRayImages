@@ -1,4 +1,4 @@
-name: TelcoCustomerCI
+name: ChestXRayImagesCI
 
 on: [push, pull_request]
 
