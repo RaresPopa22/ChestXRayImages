@@ -68,3 +68,17 @@ def sample_dataset():
 @pytest.fixture
 def sample_transform():
     return lambda x: x * 2
+
+
+@pytest.fixture
+def sample_config_base_cnn():
+    return {
+            'hyperparameters': {
+                'layer_1_dropout': .05,
+                'layer_2_dropout': .1,
+                'layer_3_dropout': .2,
+                'layer_4_dropout': .3,
+            }
+        }
+
+
