@@ -3,9 +3,9 @@
 This project's goal is to detect pneumonia from chest X-ray images. It uses deep learning models and the pytorch framework to classify images as either 'NORMAL' or 'PNEUMONIA'. The project has two models defined and available for training and evaluation and prediction. One is a basic model, made up of 5 layers that is trained from scratch. The other is the well-known ResNet50 model, applied with transfer learning. Due to our limited training dataset, around 5k images, you can see that the basic model performs reasonably well for this task.
 
 The dataset used in this project is  the 'Chest X-Ray Images (Pneumonia)' from [Kaggle](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia). This dataset is made up of test/train/val directories that have the following image counts:
-    * test: 624
-    * train: 5216
-    * val: 16
+* test: 624
+* train: 5216
+* val: 16
 
 Because the original val set was unusable (only 8 samples per class), I manually copy-pasted it into the train directory and performed an 80/20 stratified split, ending up with ~1k validation images.
 
