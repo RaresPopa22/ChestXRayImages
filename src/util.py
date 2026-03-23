@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -35,7 +36,7 @@ def read_configs(base_path, specific_path):
 
 
 def parse_args_and_get_config(stage):
-    base_config_path = "config/base_config.yaml"
+    base_config_path = Path(__file__).parent.parent / 'config' / 'base_config.yaml' 
     parser = argparse.ArgumentParser()
 
     if stage == 'train':
@@ -79,7 +80,6 @@ def plot_learning_curve(training_cost, eval_cost, model_name):
 
     
 def plot_confusion_matrix(y_test, predictions, model_name):
-    labels = ['NORMAL', 'PNEUMONIA']
     cm = confusion_matrix(y_test, predictions, labels=[0, 1])
     disp = ConfusionMatrixDisplay(cm, display_labels=[0, 1])
     disp.plot()
