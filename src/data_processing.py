@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from torchvision.transforms import Compose, Resize, ColorJitter, RandomAffine, RandomResizedCrop, ToTensor, Grayscale, Normalize
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, Dataset, Subset
+from PIL import Image
 
 
 class DatasetWrapper(Dataset):
@@ -170,3 +171,18 @@ def get_imbalance_ratio(data, train_idxs):
     label_counts = Counter(training_data)
     imbalance_ratio = label_counts[0] / label_counts[1]
     return imbalance_ratio
+
+def get_predict_data(config, input_path, mean, std):
+    target_size = config['data_paths']['raw_data']['target_size']
+    predict_transform = Compose([
+        Grayscale(),
+        Resize((target_size, target_size)),
+        ToTensor(),
+        Normalize(mean, std),
+    ])
+
+    img = Image.open(input_path)
+    img = predict_transform(img)
+    img = img.unsqueeze(0)
+
+    return img
